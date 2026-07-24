@@ -40,6 +40,10 @@ impl Lambertian {
             albedo: albedo.into(),
         }
     }
+
+    pub fn get_color(&self, r: &HitRecord) -> Color {
+        self.albedo.value(r.u, r.v, &r.p)
+    }
 }
 
 impl Material for Lambertian {

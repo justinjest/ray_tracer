@@ -125,8 +125,8 @@ impl RotateX {
                     let y = j_f * bbox.y.max + (1.0 - j_f) * bbox.y.min;
                     let z = k_f * bbox.z.max + (1.0 - k_f) * bbox.z.min;
 
-                    let new_y = cos_theta * y + sin_theta * z;
-                    let new_z = -sin_theta * y + cos_theta * z;
+                    let new_y = cos_theta * y - sin_theta * z;
+                    let new_z = sin_theta * y + cos_theta * z;
 
                     let tester = Point3::new(x, new_y, new_z);
 
@@ -168,14 +168,14 @@ impl Hittable for RotateX {
 
         rec.p = Point3::new(
             rec.p.x(),
-            (self.cos_theta * rec.p.y()) + (self.sin_theta * rec.p.z()),
-            (-self.sin_theta * rec.p.y()) + (self.cos_theta * rec.p.z()),
+            (self.cos_theta * rec.p.y()) - (self.sin_theta * rec.p.z()),
+            (self.sin_theta * rec.p.y()) + (self.cos_theta * rec.p.z()),
         );
 
         rec.normal = Point3::new(
             rec.normal.x(),
-            (self.cos_theta * rec.normal.y()) + (self.sin_theta * rec.normal.z()),
-            (-self.sin_theta * rec.normal.y()) + (self.cos_theta * rec.normal.z()),
+            (self.cos_theta * rec.normal.y()) - (self.sin_theta * rec.normal.z()),
+            (self.sin_theta * rec.normal.y()) + (self.cos_theta * rec.normal.z()),
         );
 
         true

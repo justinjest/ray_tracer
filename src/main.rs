@@ -35,6 +35,41 @@ fn generic_camera() -> Camera {
     cam
 }
 
+fn rotation_test() {
+    let metal = Arc::new(Lambertian::new(Color::new(0.0, 1.0, 1.0)));
+
+    let mut boxes = HittableList::new();
+
+    boxes.add(Arc::new(Translate::new(
+        rotate(
+            generate_box(
+                &Point3::new(0.0, 0.0, 0.0),
+                &Point3::new(1.0, 1.0, 1.0),
+                metal.clone(),
+            ),
+            Vec3::new(0.0, 45.0, 0.0),
+        ),
+        Vec3::new(-0.5, -0.5, -0.5),
+    )));
+
+    boxes.add(Arc::new(Translate::new(
+        rotate(
+            generate_box(
+                &Point3::new(0.0, 0.0, 0.0),
+                &Point3::new(1.0, 1.0, 1.0),
+                metal.clone(),
+            ),
+            Vec3::new(0.0, -45.0, 0.0),
+        ),
+        Vec3::new(0.5, 0.5, 0.5),
+    )));
+
+    let mut cam = generic_camera();
+    cam.look_from = Vec3::new(9.0, 0.0, 0.0);
+    cam.look_at = Vec3::new(0.0, 0.0, 0.0);
+    cam.render(&boxes);
+}
+
 fn final_scene(image_width: usize, samples_per_pixel: usize, max_depth: usize) {
     let mut boxes1 = HittableList::new();
     let ground = Arc::new(Lambertian::new(Color::new(0.48, 0.83, 0.53)));
@@ -49,7 +84,7 @@ fn final_scene(image_width: usize, samples_per_pixel: usize, max_depth: usize) {
             let z0 = -1000.0 + j_f * w;
             let y0 = 0.0;
             let x1 = x0 + w;
-            let y1 = random_double();
+            let y1 = random_between(1.0, 101.0);
             let z1 = z0 + w;
 
             boxes1.add(generate_box(
@@ -211,6 +246,15 @@ fn cornell_smoke() {
         light,
     )));
 
+    let smoke_texture = ImageTexture::new("smoke.png");
+    let smoke_surface = Arc::new(Lambertian::new(smoke_texture));
+    let smoke = Arc::new(ImagePlane::new(
+        Point3::new(264.0, 0.0, 294.0),
+        Vec3::new(10.0, 0.0, 0.0),
+        Vec3::new(0.0, 0.0, -10.0),
+        smoke_surface,
+    ));
+    world.add(rotate(smoke, Vec3::new(0.0, 15.0, 0.0)));
     let box1 = generate_box(
         &Point3::new(0.0, 0.0, 0.0),
         &Point3::new(165.0, 330.0, 165.0),
@@ -604,7 +648,8 @@ fn main() {
         6 => simple_lights(),
         7 => cornell_box(),
         8 => cornell_smoke(),
-        9 => final_scene(1000, 1000, 40),
+        9 => final_scene(800, 10000, 40),
+        10 => rotation_test(),
         _ => final_scene(400, 250, 4),
     }
 }

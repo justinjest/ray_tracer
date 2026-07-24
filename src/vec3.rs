@@ -10,6 +10,12 @@ pub struct Vec3 {
 
 pub type Point3 = Vec3;
 
+impl PartialEq for Vec3 {
+    fn eq(&self, other: &Vec3) -> bool {
+        self.x() == other.x() && self.y() == other.y() && self.z() == other.z()
+    }
+}
+
 impl Index<usize> for Vec3 {
     type Output = f64;
 
