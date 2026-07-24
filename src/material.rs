@@ -103,6 +103,7 @@ impl Material for Metal {
 pub struct Dielectric {
     albedo: Arc<dyn Texture>,
     refraction_index: f64,
+    absorbance: f64,
 }
 
 impl Dielectric {
@@ -110,7 +111,13 @@ impl Dielectric {
         Dielectric {
             albedo: albedo.into(),
             refraction_index,
+            absorbance: 0.0,
         }
+    }
+
+    pub fn with_absorbance(mut self, absorbance: f64) -> Self {
+        self.absorbance = absorbance;
+        self
     }
 
     fn reflectance(&self, cosine: f64, refraction_index: f64) -> f64 {
@@ -127,7 +134,10 @@ impl Material for Dielectric {
         attenuation: &mut Color,
         scattered: &mut Ray,
     ) -> bool {
-        let a = &self.albedo.value(rec.u, rec.v, &rec.p);
+        let a = &self
+            .albedo
+            .value(rec.u, rec.v, &rec.p)
+            .powf(self.absorbance);
         *attenuation = *a;
 
         let ri = if rec.front_face {

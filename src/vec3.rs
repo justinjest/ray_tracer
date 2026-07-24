@@ -265,6 +265,13 @@ impl Vec3 {
         }
     }
 
+    pub fn powf(&mut self, power: f64) -> Self {
+        self.x = self.x.powf(power);
+        self.y = self.y.powf(power);
+        self.z = self.z.powf(power);
+        *self
+    }
+
     pub fn random() -> Vec3 {
         Vec3 {
             x: random_double(),
