@@ -143,7 +143,7 @@ impl Hittable for ImagePlane {
             return false;
         }
 
-        if self.mat.get_color(&rec) == Color::new(1.0, 1.0, 1.0) {
+        if self.mat.get_color(rec) == Color::new(1.0, 1.0, 1.0) {
             return false;
         }
 

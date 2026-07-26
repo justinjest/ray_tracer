@@ -15,9 +15,63 @@ mod rtw_image;
 mod rtweekend;
 mod sphere;
 mod texture;
+mod tri;
 mod vec3;
 
 use crate::rtweekend::*;
+
+fn cornell_setup() -> HittableList {
+    let mut world = HittableList::new();
+
+    let red = Arc::new(Lambertian::new(Color::new(0.65, 0.05, 0.05)));
+    let white = Arc::new(Lambertian::new(Color::new(0.73, 0.73, 0.73)));
+    let green = Arc::new(Lambertian::new(Color::new(0.12, 0.45, 0.15)));
+    let light = Arc::new(DiffuseLight::new(Color::new(7.0, 7.0, 7.0)));
+
+    world.add(Arc::new(Quad::new(
+        Point3::new(555.0, 0.0, 0.0),
+        Vec3::new(0.0, 555.0, 0.0),
+        Vec3::new(0.0, 0.0, 555.0),
+        green,
+    )));
+
+    world.add(Arc::new(Quad::new(
+        Point3::new(0.0, 0.0, 0.0),
+        Vec3::new(0.0, 555.0, 0.0),
+        Vec3::new(0.0, 0.0, 555.0),
+        red,
+    )));
+
+    world.add(Arc::new(Quad::new(
+        Point3::new(0.0, 0.0, 0.0),
+        Vec3::new(555.0, 0.0, 0.0),
+        Vec3::new(0.0, 0.0, 555.0),
+        white.clone(),
+    )));
+
+    world.add(Arc::new(Quad::new(
+        Point3::new(0.0, 0.0, 555.0),
+        Vec3::new(555.0, 0.0, 0.0),
+        Vec3::new(0.0, 555.0, 0.0),
+        white.clone(),
+    )));
+
+    world.add(Arc::new(Quad::new(
+        Point3::new(555.0, 555.0, 555.0),
+        Vec3::new(-555.0, 0.0, 0.0),
+        Vec3::new(0.0, 0.0, -555.0),
+        white.clone(),
+    )));
+
+    world.add(Arc::new(Quad::new(
+        Point3::new(343.0, 554.0, 332.0),
+        Vec3::new(-130.0, 0.0, 0.0),
+        Vec3::new(0.0, 0.0, -105.0),
+        light,
+    )));
+
+    world
+}
 
 fn generic_camera() -> Camera {
     let mut cam = Camera::new();
@@ -196,55 +250,32 @@ fn final_scene(image_width: usize, samples_per_pixel: usize, max_depth: usize) {
     cam.render(&world);
 }
 
+fn cornell_obj() {
+    let mut world = cornell_setup();
+
+    let mat = Arc::new(Lambertian::new(Color::new(0.5, 0.5, 0.5)));
+    let obj = load_obj_triangles("suzanne.obj", mat);
+
+    world.add(Arc::new(Translate::new(
+        Arc::new(BvhNode::new(obj)),
+        Vec3::new(200.0, 100.0, 0.0),
+    )));
+
+    let mut cam = generic_camera();
+    cam.aspect_ratio = 1.0;
+    cam.image_width = 400;
+    cam.samples_per_pixel = 200;
+    cam.background = Color::new(0.0, 0.0, 0.0);
+    cam.vfov = 40.0;
+    cam.look_from = Point3::new(278.0, 278.0, -800.0);
+    cam.look_at = Point3::new(278.0, 278.0, 0.0);
+    cam.render(&world);
+}
+
 fn cornell_smoke() {
-    let mut world = HittableList::new();
+    let mut world = cornell_setup();
 
-    let red = Arc::new(Lambertian::new(Color::new(0.65, 0.05, 0.05)));
-    let white = Arc::new(Lambertian::new(Color::new(0.73, 0.73, 0.73)));
-    let green = Arc::new(Lambertian::new(Color::new(0.12, 0.45, 0.15)));
-    let light = Arc::new(DiffuseLight::new(Color::new(7.0, 7.0, 7.0)));
-
-    world.add(Arc::new(Quad::new(
-        Point3::new(555.0, 0.0, 0.0),
-        Vec3::new(0.0, 555.0, 0.0),
-        Vec3::new(0.0, 0.0, 555.0),
-        green,
-    )));
-
-    world.add(Arc::new(Quad::new(
-        Point3::new(0.0, 0.0, 0.0),
-        Vec3::new(0.0, 555.0, 0.0),
-        Vec3::new(0.0, 0.0, 555.0),
-        red,
-    )));
-
-    world.add(Arc::new(Quad::new(
-        Point3::new(0.0, 0.0, 0.0),
-        Vec3::new(555.0, 0.0, 0.0),
-        Vec3::new(0.0, 0.0, 555.0),
-        white.clone(),
-    )));
-
-    world.add(Arc::new(Quad::new(
-        Point3::new(0.0, 0.0, 555.0),
-        Vec3::new(555.0, 0.0, 0.0),
-        Vec3::new(0.0, 555.0, 0.0),
-        white.clone(),
-    )));
-
-    world.add(Arc::new(Quad::new(
-        Point3::new(555.0, 555.0, 555.0),
-        Vec3::new(-555.0, 0.0, 0.0),
-        Vec3::new(0.0, 0.0, -555.0),
-        white.clone(),
-    )));
-
-    world.add(Arc::new(Quad::new(
-        Point3::new(343.0, 554.0, 332.0),
-        Vec3::new(-130.0, 0.0, 0.0),
-        Vec3::new(0.0, 0.0, -105.0),
-        light,
-    )));
+    let white = Arc::new(Lambertian::new(Color::new(1.0, 1.0, 1.0)));
 
     let smoke_texture = ImageTexture::new("smoke.png");
     let smoke_surface = Arc::new(Lambertian::new(smoke_texture));
@@ -648,8 +679,9 @@ fn main() {
         6 => simple_lights(),
         7 => cornell_box(),
         8 => cornell_smoke(),
-        9 => final_scene(800, 10000, 40),
+        9 => final_scene(800, 1000, 40),
         10 => rotation_test(),
+        11 => cornell_obj(),
         _ => final_scene(400, 250, 4),
     }
 }

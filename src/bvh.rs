@@ -9,9 +9,9 @@ pub struct BvhNode {
 
 impl BvhNode {
     fn new_from_slice(objects: &mut [Arc<dyn Hittable>], start: usize, end: usize) -> Self {
-        let mut bbox = Aabb::empty();
+        let mut bbox = objects[start].bounding_box();
 
-        for obj in objects.iter_mut() {
+        for obj in &objects[start + 1..end] {
             bbox = Aabb::new_from_box(&bbox, &obj.bounding_box());
         }
 
@@ -75,7 +75,7 @@ fn box_z_compare(a: &Arc<dyn Hittable>, b: &Arc<dyn Hittable>) -> Ordering {
 
 impl Hittable for BvhNode {
     fn hit(&self, r: &Ray, ray_t: Interval, rec: &mut HitRecord) -> bool {
-        if !self.bbox.hit(r, &mut ray_t.clone()) {
+        if !self.bbox.hit(r, &ray_t.clone()) {
             return false;
         }
 

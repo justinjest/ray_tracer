@@ -11,6 +11,7 @@ pub use crate::ray::*;
 pub use crate::rotation::*;
 pub use crate::sphere::*;
 pub use crate::texture::*;
+pub use crate::tri::*;
 pub use crate::vec3::*;
 pub use crate::{perlin::*, quad::*};
 pub use rand::prelude::*;

@@ -106,6 +106,7 @@ pub struct Dielectric {
     absorbance: f64,
 }
 
+#[allow(unused)]
 impl Dielectric {
     pub fn new(albedo: impl Into<Arc<dyn Texture>>, refraction_index: f64) -> Dielectric {
         Dielectric {
