@@ -253,22 +253,25 @@ fn final_scene(image_width: usize, samples_per_pixel: usize, max_depth: usize) {
 fn cornell_obj() {
     let mut world = cornell_setup();
 
-    let mat = Arc::new(Lambertian::new(Color::new(0.5, 0.5, 0.5)));
-    let obj = load_obj_triangles("suzanne.obj", mat);
-
-    world.add(Arc::new(Translate::new(
-        Arc::new(BvhNode::new(obj)),
-        Vec3::new(200.0, 100.0, 0.0),
-    )));
+    let mat = Arc::new(Lambertian::new(Color::new(1.0, 0.0, 0.0)));
+    let obj = rotate(
+        Arc::new(Translate::new(
+            load_obj_triangles("suzanne.obj", mat.clone()),
+            Vec3::new(278.0, 278.0, 10.0),
+        )),
+        Vec3::new(-45.0, 0.0, 0.0),
+    );
+    world.add(obj);
 
     let mut cam = generic_camera();
     cam.aspect_ratio = 1.0;
-    cam.image_width = 400;
-    cam.samples_per_pixel = 200;
+    cam.image_width = 100;
+    cam.samples_per_pixel = 10;
     cam.background = Color::new(0.0, 0.0, 0.0);
     cam.vfov = 40.0;
     cam.look_from = Point3::new(278.0, 278.0, -800.0);
     cam.look_at = Point3::new(278.0, 278.0, 0.0);
+
     cam.render(&world);
 }
 
@@ -670,7 +673,7 @@ fn earth() {
 }
 
 fn main() {
-    match 9 {
+    match 11 {
         1 => bouncing_spheres(),
         2 => checkered_spheres(),
         3 => earth(),

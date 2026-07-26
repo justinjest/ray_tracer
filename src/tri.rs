@@ -44,7 +44,7 @@ impl Hittable for Tri {
         let epsillon = 1e-8;
 
         let edge1: Vec3 = self.p1 - self.p0;
-        let edge2: Vec3 = self.p2 - self.p1;
+        let edge2: Vec3 = self.p2 - self.p0;
         let h = cross(r.direction(), &edge2);
         let a = dot(&edge1, &h);
         if a < epsillon && a > -epsillon {
@@ -76,7 +76,11 @@ impl Hittable for Tri {
     }
 
     fn bounding_box(&self) -> Aabb {
-        self.bbox
+        // self.bbox
+        Aabb::new_from_points(
+            &Point3::new(-100.0, -100.0, -100.0),
+            &Point3::new(100.0, 100.0, 100.0),
+        )
     }
 }
 
@@ -106,7 +110,7 @@ fn load_obj_from_path(filename: &str) -> Option<(Vec<tobj::Model>, Vec<tobj::Mat
     None
 }
 
-pub fn load_obj_triangles(filename: &str, mat: Arc<dyn Material>) -> HittableList {
+pub fn load_obj_triangles(filename: &str, mat: Arc<dyn Material>) -> Arc<dyn Hittable> {
     // Load the OBJ file (triangulating non-triangle faces automatically)
     let (models, _) = load_obj_from_path(filename).expect("Unable to load obj file");
 
@@ -145,5 +149,5 @@ pub fn load_obj_triangles(filename: &str, mat: Arc<dyn Material>) -> HittableLis
         }
     }
 
-    triangles
+    Arc::new(BvhNode::new(triangles))
 }
