@@ -254,25 +254,28 @@ fn cornell_obj() {
     let mut world = cornell_setup();
 
     let mat = Arc::new(Lambertian::new(Color::new(1.0, 0.0, 0.0)));
-    let obj = rotate(
-        Arc::new(Translate::new(
-            load_obj_triangles("suzanne.obj", mat.clone()),
-            Vec3::new(278.0, 278.0, 10.0),
-        )),
-        Vec3::new(-45.0, 0.0, 0.0),
+    let obj = Translate::new(
+        rotate(
+            Arc::new(Scale::new(
+                load_obj_triangles("suzanne.obj", mat.clone()),
+                Vec3::new(100.0, 100.0, 100.0),
+            )),
+            Vec3::new(0.0, 180.0, 0.0),
+        ),
+        Vec3::new(278.0, 278.0, 0.0),
     );
-    world.add(obj);
+    world.add(Arc::new(obj));
 
     let mut cam = generic_camera();
     cam.aspect_ratio = 1.0;
-    cam.image_width = 100;
-    cam.samples_per_pixel = 10;
+    cam.image_width = 200;
+    cam.samples_per_pixel = 500;
     cam.background = Color::new(0.0, 0.0, 0.0);
     cam.vfov = 40.0;
+
     cam.look_from = Point3::new(278.0, 278.0, -800.0);
     cam.look_at = Point3::new(278.0, 278.0, 0.0);
-
-    cam.render(&world);
+    cam.render(&(HittableList::new_from_list(vec![Arc::new(BvhNode::new(world))])));
 }
 
 fn cornell_smoke() {
@@ -319,7 +322,7 @@ fn cornell_smoke() {
     let mut cam = generic_camera();
     cam.aspect_ratio = 1.0;
     cam.image_width = 400;
-    cam.samples_per_pixel = 200;
+    cam.samples_per_pixel = 500;
     cam.background = Color::new(0.0, 0.0, 0.0);
     cam.vfov = 40.0;
     cam.look_from = Point3::new(278.0, 278.0, -800.0);
@@ -396,10 +399,12 @@ fn cornell_box() {
     let r_box2 = Arc::new(RotateY::new(box2, -18.0));
     let r_t_box2 = Arc::new(Translate::new(r_box2, Vec3::new(130.0, 0.0, 65.0)));
     world.add(r_t_box2);
+
     let mut cam = generic_camera();
     cam.aspect_ratio = 1.0;
-    cam.image_width = 200;
-    cam.samples_per_pixel = 500;
+    cam.image_width = 600;
+    cam.samples_per_pixel = 1000;
+    cam.max_depth = 50;
     cam.background = Color::new(0.0, 0.0, 0.0);
     cam.vfov = 40.0;
     cam.look_from = Point3::new(278.0, 278.0, -800.0);
@@ -673,7 +678,7 @@ fn earth() {
 }
 
 fn main() {
-    match 11 {
+    match 7 {
         1 => bouncing_spheres(),
         2 => checkered_spheres(),
         3 => earth(),

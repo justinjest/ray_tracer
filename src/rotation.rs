@@ -37,8 +37,8 @@ impl RotateZ {
                     let y = j_f * bbox.y.max + (1.0 - j_f) * bbox.y.min;
                     let z = k_f * bbox.z.max + (1.0 - k_f) * bbox.z.min;
 
-                    let new_x = cos_theta * x + sin_theta * y;
-                    let new_y = -sin_theta * x + cos_theta * y;
+                    let new_x = cos_theta * x - sin_theta * y;
+                    let new_y = sin_theta * x + cos_theta * y;
 
                     let tester = Point3::new(new_x, new_y, z);
 
@@ -61,14 +61,14 @@ impl RotateZ {
 impl Hittable for RotateZ {
     fn hit(&self, r: &Ray, ray_t: Interval, rec: &mut HitRecord) -> bool {
         let origin = Point3::new(
-            (self.cos_theta * r.origin().x()) - (self.sin_theta * r.origin().y()),
-            (self.sin_theta * r.origin().x()) + (self.cos_theta * r.origin().y()),
+            (self.cos_theta * r.origin().x()) + (self.sin_theta * r.origin().y()),
+            (-self.sin_theta * r.origin().x()) + (self.cos_theta * r.origin().y()),
             r.origin().z(),
         );
 
         let direction = Vec3::new(
-            (self.cos_theta * r.direction().x()) - (self.sin_theta * r.direction().y()),
-            (self.sin_theta * r.direction().x()) + (self.cos_theta * r.direction().y()),
+            (self.cos_theta * r.direction().x()) + (self.sin_theta * r.direction().y()),
+            (-self.sin_theta * r.direction().x()) + (self.cos_theta * r.direction().y()),
             r.direction().z(),
         );
 
@@ -79,14 +79,14 @@ impl Hittable for RotateZ {
         }
 
         rec.p = Point3::new(
-            (self.cos_theta * rec.p.x()) + (self.sin_theta * rec.p.y()),
-            (-self.sin_theta * rec.p.x()) + (self.cos_theta * rec.p.y()),
+            (self.cos_theta * rec.p.x()) - (self.sin_theta * rec.p.y()),
+            (self.sin_theta * rec.p.x()) + (self.cos_theta * rec.p.y()),
             rec.p.z(),
         );
 
         rec.normal = Point3::new(
-            (self.cos_theta * rec.normal.x()) + (self.sin_theta * rec.normal.y()),
-            (-self.sin_theta * rec.normal.x()) + (self.cos_theta * rec.normal.y()),
+            (self.cos_theta * rec.normal.x()) - (self.sin_theta * rec.normal.y()),
+            (self.sin_theta * rec.normal.x()) + (self.cos_theta * rec.normal.y()),
             rec.normal.z(),
         );
 
@@ -150,14 +150,14 @@ impl Hittable for RotateX {
     fn hit(&self, r: &Ray, ray_t: Interval, rec: &mut HitRecord) -> bool {
         let origin = Point3::new(
             r.origin().x(),
-            (self.cos_theta * r.origin().y()) - (self.sin_theta * r.origin().z()),
-            (self.sin_theta * r.origin().y()) + (self.cos_theta * r.origin().z()),
+            (self.cos_theta * r.origin().y()) + (self.sin_theta * r.origin().z()),
+            (-self.sin_theta * r.origin().y()) + (self.cos_theta * r.origin().z()),
         );
 
         let direction = Vec3::new(
             r.direction().x(),
-            (self.cos_theta * r.direction().y()) - (self.sin_theta * r.direction().z()),
-            (self.sin_theta * r.direction().y()) + (self.cos_theta * r.direction().z()),
+            (self.cos_theta * r.direction().y()) + (self.sin_theta * r.direction().z()),
+            (-self.sin_theta * r.direction().y()) + (self.cos_theta * r.direction().z()),
         );
 
         let rotated_r = Ray::new_with_time(origin, direction, r.time());
@@ -271,5 +271,64 @@ impl Hittable for RotateY {
 
     fn bounding_box(&self) -> Aabb {
         self.bbox
+    }
+}
+
+pub struct Scale {
+    object: Arc<dyn Hittable>,
+    scale: Vec3,
+    inv_scale: Vec3,
+}
+
+impl Scale {
+    pub fn new(object: Arc<dyn Hittable>, scale: Vec3) -> Self {
+        Self {
+            object,
+            scale,
+            inv_scale: Vec3 {
+                x: 1.0 / scale.x(),
+                y: 1.0 / scale.y(),
+                z: 1.0 / scale.z(),
+            },
+        }
+    }
+}
+
+impl Hittable for Scale {
+    fn hit(&self, r: &Ray, ray_t: Interval, rec: &mut HitRecord) -> bool {
+        let local_origin: Vec3 = *r.origin() * self.inv_scale;
+        let local_direction: Vec3 = *r.direction() * self.inv_scale;
+        let local_ray = Ray::new_with_time(local_origin, local_direction, r.time());
+
+        if !self.object.hit(&local_ray, ray_t, rec) {
+            return false;
+        }
+
+        rec.p = rec.p * self.scale;
+        rec.t = (rec.p - *r.origin()).length() / r.direction().length();
+        // I don't think this will work for spheres
+        rec.normal = unit_vector(rec.normal * self.inv_scale);
+        true
+    }
+
+    fn bounding_box(&self) -> Aabb {
+        let bbox = self.object.bounding_box();
+        let min = Vec3::new(bbox.x.min, bbox.y.min, bbox.z.min);
+        let max = Vec3::new(bbox.x.max, bbox.y.max, bbox.z.max);
+        let scaled_min = min * self.scale;
+        let scaled_max = max * self.scale;
+
+        Aabb::new_from_points(
+            &Point3::new(
+                scaled_min.x.min(scaled_max.x),
+                scaled_min.y.min(scaled_max.y),
+                scaled_min.z.min(scaled_max.z),
+            ),
+            &Point3::new(
+                scaled_min.x.max(scaled_max.x),
+                scaled_min.y.max(scaled_max.y),
+                scaled_min.z.max(scaled_max.z),
+            ),
+        )
     }
 }

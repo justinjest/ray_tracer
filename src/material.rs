@@ -14,6 +14,10 @@ pub trait Material: Send + Sync {
     fn emited(&self, _u: f64, _v: f64, _p: &Point3) -> Color {
         Color::new(0.0, 0.0, 0.0)
     }
+
+    fn scattering_pdf(&self, _r: &Ray, _rec: &HitRecord, _scattered: &mut Ray) -> f64 {
+        0.0
+    }
 }
 
 pub struct NoMaterial;
@@ -65,6 +69,15 @@ impl Material for Lambertian {
         let a = &self.albedo.value(rec.u, rec.v, &rec.p);
         *attenuation = *a;
         true
+    }
+
+    fn scattering_pdf(&self, _r: &Ray, rec: &HitRecord, scattered: &mut Ray) -> f64 {
+        let cos_theta = dot(&rec.normal, &unit_vector(*scattered.direction()));
+        if cos_theta < 0.0 {
+            0.0
+        } else {
+            cos_theta / PI
+        }
     }
 }
 

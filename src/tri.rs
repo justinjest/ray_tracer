@@ -116,6 +116,14 @@ pub fn load_obj_triangles(filename: &str, mat: Arc<dyn Material>) -> Arc<dyn Hit
 
     let mut triangles = HittableList::new();
 
+    let mut min_x = INFINITY;
+    let mut min_y = INFINITY;
+    let mut min_z = INFINITY;
+
+    let mut max_x = -INFINITY;
+    let mut max_y = -INFINITY;
+    let mut max_z = -INFINITY;
+
     for model in models {
         let mesh = &model.mesh;
 
@@ -144,8 +152,25 @@ pub fn load_obj_triangles(filename: &str, mat: Arc<dyn Material>) -> Arc<dyn Hit
                 mesh.positions[3 * i2 + 2] as f64,
             );
 
+            min_x = min_x.min(p0.x()).min(p1.x()).min(p2.x());
+            min_y = min_y.min(p0.y()).min(p1.y()).min(p2.y());
+            min_z = min_z.min(p0.z()).min(p1.z()).min(p2.z());
+
+            max_x = max_x.max(p0.x()).max(p1.x()).max(p2.x());
+            max_y = max_y.max(p0.y()).max(p1.y()).max(p2.y());
+            max_z = max_z.max(p0.z()).max(p1.z()).max(p2.z());
+
+            let center_vec = -Vec3::new(
+                (min_x + max_x) / 2.0,
+                (min_y + max_y) / 2.0,
+                (min_z + max_z) / 2.0,
+            );
+
             // Construct your ray tracer's Triangle
-            triangles.add(Arc::new(Tri::new(p0, p1, p2, mat.clone())));
+            triangles.add(Arc::new(Translate::new(
+                Arc::new(Tri::new(p0, p1, p2, mat.clone())),
+                center_vec,
+            )));
         }
     }
 

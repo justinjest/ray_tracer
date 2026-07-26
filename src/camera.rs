@@ -17,6 +17,8 @@ pub struct Camera {
     pub focus_dist: f64,
     image_height: u64,
     pixel_sample_scale: f64,
+    sqrt_spp: u64,
+    inv_sqrt_spp: f64,
     center: Point3,
     pixel00_loc: Point3,
     pixel_delta_u: Vec3,
@@ -44,6 +46,8 @@ impl Camera {
             focus_dist: 10.0,
             image_height: 0,
             pixel_sample_scale: 0.0,
+            sqrt_spp: 0,
+            inv_sqrt_spp: 0.0,
             center: Point3::new(0.0, 0.0, 0.0),
             pixel00_loc: Point3::new(0.0, 0.0, 0.0),
             pixel_delta_u: Vec3::new(0.0, 0.0, 0.0),
@@ -75,12 +79,12 @@ impl Camera {
                 );
                 for i in 0..self.image_width {
                     let mut pixel_color = Color::new(0.0, 0.0, 0.0);
-
-                    for _ in 0..cam.samples_per_pixel {
-                        let r = self.get_ray(i, j as u64);
-                        pixel_color += self.ray_color(&r, self.max_depth, world);
+                    for s_j in 0..self.sqrt_spp {
+                        for s_i in 0..self.sqrt_spp {
+                            let r = self.get_ray(i, j as u64, s_j as u64, s_i as u64);
+                            pixel_color += self.ray_color(&r, self.max_depth, world);
+                        }
                     }
-
                     scanline[i as usize] = self.pixel_sample_scale * pixel_color;
                 }
             });
@@ -101,6 +105,9 @@ impl Camera {
         if self.image_height < 1 {
             self.image_height = 1;
         }
+
+        self.sqrt_spp = self.samples_per_pixel.isqrt();
+        self.inv_sqrt_spp = 1.0 / self.sqrt_spp as f64;
 
         self.pixel_sample_scale = 1.0 / self.samples_per_pixel as f64;
 
@@ -131,8 +138,8 @@ impl Camera {
         self.defocus_disk_v = self.v * defocus_radius;
     }
 
-    fn get_ray(&self, i: u64, j: u64) -> Ray {
-        let offset = self.sample_square();
+    fn get_ray(&self, i: u64, j: u64, s_i: u64, s_j: u64) -> Ray {
+        let offset = self.sample_square_stratified(s_i, s_j);
         let pixel_sample = self.pixel00_loc
             + ((i as f64 + offset.x()) * self.pixel_delta_u)
             + ((j as f64 + offset.y()) * self.pixel_delta_v);
@@ -157,6 +164,13 @@ impl Camera {
         Vec3::new(random_double() - 0.5, random_double() - 0.5, 0.0)
     }
 
+    fn sample_square_stratified(&self, s_i: u64, s_j: u64) -> Vec3 {
+        let px = ((s_i as f64 * random_double()) * self.inv_sqrt_spp) - 0.5;
+        let py = ((s_j as f64 * random_double()) * self.inv_sqrt_spp) - 0.5;
+
+        Vec3::new(px, py, 0.0)
+    }
+
     fn ray_color(&self, r: &Ray, depth: u64, world: &HittableList) -> Color {
         if depth == 0 {
             return Color::new(0.0, 0.0, 0.0);
@@ -174,6 +188,12 @@ impl Camera {
         if !rec.mat.scatter(r, &rec, &mut attenuation, &mut scattered) {
             return color_from_emission;
         }
+
+        let scattering_pdf = rec.mat.scattering_pdf(r, rec, scattered);
+        let pdf_value = scattering_pdf;
+
+        let color_from_scatter =
+            (attenuation * scattering_pdf * self.ray_color(&scattered, depth - 1, world));
 
         let color = attenuation * self.ray_color(&scattered, depth - 1, world);
 
