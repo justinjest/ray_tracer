@@ -64,20 +64,9 @@ impl Material for Lambertian {
             scatter_direction = rec.normal;
         }
 
-        let s = &Ray::new_with_time(rec.p, scatter_direction, r.time());
-        *scattered = *s;
-        let a = &self.albedo.value(rec.u, rec.v, &rec.p);
-        *attenuation = *a;
+        *scattered = Ray::new_with_time(rec.p, scatter_direction, r.time());
+        *attenuation = self.albedo.value(rec.u, rec.v, &rec.p);
         true
-    }
-
-    fn scattering_pdf(&self, _r: &Ray, rec: &HitRecord, scattered: &mut Ray) -> f64 {
-        let cos_theta = dot(&rec.normal, &unit_vector(*scattered.direction()));
-        if cos_theta < 0.0 {
-            0.0
-        } else {
-            cos_theta / PI
-        }
     }
 }
 
@@ -189,6 +178,15 @@ impl DiffuseLight {
 }
 
 impl Material for DiffuseLight {
+    fn scatter(
+        &self,
+        _r: &Ray,
+        _rec: &HitRecord,
+        _attenuation: &mut Color,
+        _scattered: &mut Ray,
+    ) -> bool {
+        false
+    }
     fn emited(&self, u: f64, v: f64, p: &Point3) -> Color {
         self.tex.value(u, v, p)
     }

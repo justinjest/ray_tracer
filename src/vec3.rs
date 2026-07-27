@@ -218,13 +218,23 @@ impl DivAssign<f64> for Vec3 {
         self.z /= rhs;
     }
 }
+
 pub fn random_unit_vec() -> Vec3 {
     loop {
         let p = random_vector_between(-1.0, 1.0);
         let lensq = p.length_squared();
-        if 10.0 * (10.0_f64).powf(-160.0) < lensq && lensq <= 1.0 {
+        if 1e-160 < lensq && lensq <= 1.0 {
             return p / lensq.sqrt();
         }
+    }
+}
+
+pub fn random_on_hemisphere(normal: &Vec3) -> Vec3 {
+    let on_unit_sphere = random_unit_vec();
+    if dot(&on_unit_sphere, normal) > 0.0 {
+        on_unit_sphere
+    } else {
+        -on_unit_sphere
     }
 }
 
@@ -299,7 +309,7 @@ impl Vec3 {
     }
 
     pub fn near_zero(&self) -> bool {
-        let s = 10.0_f64 * 10.0_f64.powf(-8.0);
-        self.x < s && self.y < s && self.z < s
+        let s = 1e-8;
+        self.x.abs() < s && self.y.abs() < s && self.z.abs() < s
     }
 }

@@ -15,15 +15,17 @@ impl Quad {
     pub fn new(q: Point3, u: Vec3, v: Vec3, mat: Arc<dyn Material>) -> Self {
         let n = cross(&u, &v);
         let normal = unit_vector(n);
+        let d = dot(&normal, &q);
+        let w = n / dot(&n, &n);
         let mut quad = Quad {
             q,
             u,
             v,
-            w: n / dot(&n, &n),
+            w,
             mat,
             bbox: Aabb::empty(),
             normal,
-            d: dot(&normal, &q),
+            d,
         };
         quad.set_bounding_box();
         quad
@@ -35,15 +37,13 @@ impl Quad {
         self.bbox = Aabb::new_from_box(&bbox_diagonal1, &bbox_diagonal2);
     }
 
-    fn is_interior(a: f64, b: f64, rec: &mut HitRecord) -> bool {
+    fn is_interior(a: f64, b: f64) -> bool {
         let unit_interval = Interval::new(0.0, 1.0);
 
         if !unit_interval.contains(a) || !unit_interval.contains(b) {
             return false;
         }
 
-        rec.u = a;
-        rec.v = b;
         true
     }
 }
@@ -51,7 +51,7 @@ impl Hittable for Quad {
     fn hit(&self, r: &Ray, ray_t: Interval, rec: &mut HitRecord) -> bool {
         let denom = dot(&self.normal, r.direction());
 
-        if denom.abs() < 10.0 * (10.0_f64).powf(-18.0) {
+        if denom.abs() < 1e-8 {
             return false;
         }
 
@@ -65,10 +65,11 @@ impl Hittable for Quad {
         let alpha = dot(&self.w, &cross(&planar_hitpt_vector, &self.v));
         let beta = dot(&self.w, &cross(&self.u, &planar_hitpt_vector));
 
-        if !Self::is_interior(alpha, beta, rec) {
+        if !Self::is_interior(alpha, beta) {
             return false;
         }
-
+        rec.u = alpha;
+        rec.v = beta;
         rec.t = t;
         rec.p = intersection;
         rec.mat = self.mat.clone();
@@ -101,7 +102,7 @@ impl ImagePlane {
             q,
             u,
             v,
-            w: n / dot(&n, &n),
+            w: &n / dot(&n, &n),
             mat,
             bbox: Aabb::empty(),
             normal,
@@ -212,16 +213,18 @@ pub fn generate_box(a: &Point3, b: &Point3, mat: Arc<dyn Material>) -> Arc<Hitta
         mat.clone(),
     ))); // left
     sides.add(Arc::new(Quad::new(
-        Point3::new(min.x(), max.y(), max.z()),
-        dx,
+        Point3::new(max.x(), max.y(), max.z()),
+        -dx,
         -dz,
         mat.clone(),
     ))); // top
+
     sides.add(Arc::new(Quad::new(
-        Point3::new(min.x(), min.y(), min.z()),
-        dx,
+        Point3::new(max.x(), min.y(), min.z()),
+        -dx,
         dz,
         mat.clone(),
     ))); // bottom
+
     Arc::new(sides)
 }
