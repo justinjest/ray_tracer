@@ -14,6 +14,12 @@ pub trait Pdf: Send + Sync {
 
 pub struct SpherePdf {}
 
+impl SpherePdf {
+    pub fn new() -> Self {
+        SpherePdf {}
+    }
+}
+
 impl Pdf for SpherePdf {
     fn value(&self, _direction: &Vec3) -> f64 {
         1.0 / (4.0 / PI)
@@ -65,5 +71,29 @@ impl Pdf for HittablePdf {
 
     fn generate(&self) -> Vec3 {
         self.objects.random(&self.origin)
+    }
+}
+
+pub struct MixturePdf {
+    pdf: [Arc<dyn Pdf>; 2],
+}
+
+impl MixturePdf {
+    pub fn new(p0: Arc<dyn Pdf>, p1: Arc<dyn Pdf>) -> Self {
+        MixturePdf { pdf: [p0, p1] }
+    }
+}
+
+impl Pdf for MixturePdf {
+    fn generate(&self) -> Vec3 {
+        if random_double() < 0.5 {
+            return self.pdf[0].generate();
+        } else {
+            return self.pdf[1].generate();
+        }
+    }
+
+    fn value(&self, direction: &Vec3) -> f64 {
+        0.5 * self.pdf[0].value(direction) + 0.5 * self.pdf[1].value(direction)
     }
 }

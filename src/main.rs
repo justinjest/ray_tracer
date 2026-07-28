@@ -143,10 +143,12 @@ fn cornell_box() {
         light,
     )));
 
+    let aluminum = Arc::new(Metal::new(Color::new(0.8, 0.85, 0.88), 0.0));
+
     let box1 = generate_box(
         &Point3::new(0.0, 0.0, 0.0),
         &Point3::new(165.0, 330.0, 165.0),
-        white.clone(),
+        aluminum,
     );
 
     let r_box1 = Arc::new(RotateY::new(box1, 15.0));
@@ -174,7 +176,7 @@ fn cornell_box() {
     let mut cam = generic_camera();
     cam.aspect_ratio = 1.0;
     cam.image_width = 600;
-    cam.samples_per_pixel = 10;
+    cam.samples_per_pixel = 100;
     cam.max_depth = 50;
     cam.background = Color::new(0.0, 0.0, 0.0);
     cam.vfov = 40.0;

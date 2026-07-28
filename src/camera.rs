@@ -187,26 +187,36 @@ impl Camera {
             return self.background;
         }
 
-        let mut scattered = Ray::new(Vec3::new(0.0, 0.0, 0.0), Point3::new(0.0, 0.0, 0.0));
-        let mut attenuation = Color::new(0.0, 0.0, 0.0);
-        let mut pdf_value = 0.0;
+        let mut srec = ScatterRecord {
+            attenuation: Color::new(0.0, 0.0, 0.0).into(),
+            pdf_ptr: None,
+            skip_pdf: true,
+            skip_pdf_ray: Ray::new(Point3::new(0.0, 0.0, 0.0), Vec3::new(0.0, 0.0, 0.0)),
+        };
+
         let color_from_emission = rec.mat.emited(r, &rec, rec.u, rec.v, &rec.p);
 
-        if !rec
-            .mat
-            .scatter(r, &rec, &mut attenuation, &mut scattered, &mut pdf_value)
-        {
+        if !rec.mat.scatter(r, &rec, &mut srec) {
             return color_from_emission;
         }
 
-        let light_pdf = HittablePdf::new(lights.clone(), rec.p);
-        scattered = Ray::new_with_time(rec.p, light_pdf.generate(), r.time());
-        pdf_value = light_pdf.value(scattered.direction());
+        if srec.skip_pdf {
+            return srec.attenuation.value(rec.u, rec.v, &rec.p)
+                * self.ray_color(&srec.skip_pdf_ray, depth - 1, world, lights);
+        }
+
+        let light_ptr = Arc::new(HittablePdf::new(lights.clone(), rec.p));
+        let mixed_pdf = Arc::new(MixturePdf::new(light_ptr, srec.pdf_ptr.unwrap()));
+
+        let mut scattered = Ray::new_with_time(rec.p, mixed_pdf.generate(), r.time());
+        let mut pdf_value = mixed_pdf.value(scattered.direction());
 
         let scattering_pdf = rec.mat.scattering_pdf(r, &rec, &mut scattered);
 
         let sample_color = self.ray_color(&scattered, depth - 1, &world, &lights);
-        let color_from_scatter = (attenuation * scattering_pdf * sample_color) / pdf_value;
+        let color_from_scatter =
+            (srec.attenuation.value(rec.u, rec.v, &rec.p) * scattering_pdf * sample_color)
+                / pdf_value;
 
         color_from_emission + color_from_scatter
     }

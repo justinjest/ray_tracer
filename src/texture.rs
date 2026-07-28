@@ -36,6 +36,12 @@ impl From<Color> for Arc<dyn Texture> {
     }
 }
 
+impl From<Color> for Box<dyn Texture> {
+    fn from(color: Color) -> Self {
+        Box::new(SolidColor::new(color))
+    }
+}
+
 impl Texture for SolidColor {
     fn value(&self, _u: f64, _v: f64, _p: &Point3) -> Color {
         self.albedo
