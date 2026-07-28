@@ -17,7 +17,7 @@ impl HitRecord {
         HitRecord {
             p: Point3::new(0.0, 0.0, 0.0),
             normal: Vec3::new(0.0, 0.0, 0.0),
-            mat: Arc::new(NoMaterial),
+            mat: Arc::new(Lambertian::new(Color::new(1.0, 0.0, 1.0))),
             u: 0.0,
             v: 0.0,
             t: 0.0,
@@ -160,4 +160,11 @@ impl Hittable for RotateY {
 pub trait Hittable: Send + Sync {
     fn hit(&self, r: &Ray, ray_t: Interval, rec: &mut HitRecord) -> bool;
     fn bounding_box(&self) -> Aabb;
+
+    fn pdf_value(&self, _origin: &Point3, _direction: &Vec3) -> f64 {
+        0.0
+    }
+    fn random(&self, _origin: &Point3) -> Vec3 {
+        Vec3::new(1.0, 0.0, 0.0)
+    }
 }

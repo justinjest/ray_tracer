@@ -7,6 +7,7 @@ pub use crate::hittable::*;
 pub use crate::hittable_list::*;
 pub use crate::interval::*;
 pub use crate::material::*;
+pub use crate::pdf::*;
 pub use crate::ray::*;
 pub use crate::rotation::*;
 pub use crate::sphere::*;

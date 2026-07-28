@@ -60,7 +60,7 @@ impl Camera {
         }
     }
 
-    pub fn render(&mut self, world: &HittableList) {
+    pub fn render(&mut self, world: Arc<dyn Hittable>, lights: Arc<dyn Hittable>) {
         self.initalize();
         let cam = &*self;
 
@@ -82,7 +82,7 @@ impl Camera {
                     for s_j in 0..self.sqrt_spp {
                         for s_i in 0..self.sqrt_spp {
                             let r = self.get_ray(i, j as u64, s_j as u64, s_i as u64);
-                            pixel_color += self.ray_color(&r, self.max_depth, world);
+                            pixel_color += self.ray_color(&r, self.max_depth, &world, &lights);
                         }
                     }
                     scanline[i as usize] = self.pixel_sample_scale * pixel_color;
@@ -171,7 +171,13 @@ impl Camera {
         Vec3::new(px, py, 0.0)
     }
 
-    fn ray_color(&self, r: &Ray, depth: u64, world: &HittableList) -> Color {
+    fn ray_color(
+        &self,
+        r: &Ray,
+        depth: u64,
+        world: &Arc<dyn Hittable>,
+        lights: &Arc<dyn Hittable>,
+    ) -> Color {
         if depth == 0 {
             return Color::new(0.0, 0.0, 0.0);
         }
@@ -183,12 +189,24 @@ impl Camera {
 
         let mut scattered = Ray::new(Vec3::new(0.0, 0.0, 0.0), Point3::new(0.0, 0.0, 0.0));
         let mut attenuation = Color::new(0.0, 0.0, 0.0);
-        let color_from_emission = rec.mat.emited(rec.u, rec.v, &rec.p);
+        let mut pdf_value = 0.0;
+        let color_from_emission = rec.mat.emited(r, &rec, rec.u, rec.v, &rec.p);
 
-        if !rec.mat.scatter(r, &rec, &mut attenuation, &mut scattered) {
+        if !rec
+            .mat
+            .scatter(r, &rec, &mut attenuation, &mut scattered, &mut pdf_value)
+        {
             return color_from_emission;
         }
-        let color_from_scatter = attenuation * self.ray_color(&scattered, depth - 1, world);
+
+        let light_pdf = HittablePdf::new(lights.clone(), rec.p);
+        scattered = Ray::new_with_time(rec.p, light_pdf.generate(), r.time());
+        pdf_value = light_pdf.value(scattered.direction());
+
+        let scattering_pdf = rec.mat.scattering_pdf(r, &rec, &mut scattered);
+
+        let sample_color = self.ray_color(&scattered, depth - 1, &world, &lights);
+        let color_from_scatter = (attenuation * scattering_pdf * sample_color) / pdf_value;
 
         color_from_emission + color_from_scatter
     }

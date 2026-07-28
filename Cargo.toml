@@ -11,3 +11,6 @@ tobj = "4.0.4"
 
 [lints.clippy]
 pedantic = "deny"
+
+[profile.release]
+debug = true
