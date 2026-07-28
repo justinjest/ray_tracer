@@ -98,7 +98,6 @@ fn cornell_box() {
     let red = Arc::new(Lambertian::new(Color::new(0.65, 0.05, 0.05)));
     let white = Arc::new(Lambertian::new(Color::new(0.73, 0.73, 0.73)));
     let green = Arc::new(Lambertian::new(Color::new(0.12, 0.45, 0.15)));
-    let mut lights = HittableList::new();
     let light = Arc::new(DiffuseLight::new(Color::new(15.0, 15.0, 15.0)));
 
     world.add(Arc::new(Quad::new(
@@ -155,34 +154,41 @@ fn cornell_box() {
     let r_t_box1 = Arc::new(Translate::new(r_box1, Vec3::new(265.0, 0.0, 295.0)));
     world.add(r_t_box1);
 
-    let box2 = generate_box(
-        &Point3::new(0.0, 0.0, 0.0),
-        &Point3::new(165.0, 165.0, 165.0),
-        white.clone(),
-    );
+    let glass = Arc::new(Dielectric::new(Color::new(1.0, 1.0, 1.0), 1.5));
+    world.add(Arc::new(Sphere::new(
+        Point3::new(190.0, 90.0, 190.0),
+        90.0,
+        glass,
+    )));
 
-    let r_box2 = rotate(box2, Vec3::new(0.0, -18.0, 0.0));
-    let r_t_box2 = Arc::new(Translate::new(r_box2, Vec3::new(130.0, 0.0, 65.0)));
-    world.add(r_t_box2);
+    let mut lights = HittableList::new();
 
     let empty_material = Arc::new(NoMaterial::new());
-    let lights = Quad::new(
+    lights.add(Arc::new(Quad::new(
         Point3::new(343.0, 554.0, 332.0),
         Vec3::new(-130.0, 0.0, 0.0),
         Vec3::new(0.0, 0.0, -105.0),
+        empty_material.clone(),
+    )));
+    lights.add(Arc::new(Sphere::new(
+        Point3::new(190.0, 90.0, 190.0),
+        90.0,
         empty_material,
-    );
+    )));
 
     let mut cam = generic_camera();
     cam.aspect_ratio = 1.0;
-    cam.image_width = 600;
-    cam.samples_per_pixel = 100;
+    cam.image_width = 1000;
+    cam.samples_per_pixel = 5000;
     cam.max_depth = 50;
     cam.background = Color::new(0.0, 0.0, 0.0);
     cam.vfov = 40.0;
     cam.look_from = Point3::new(278.0, 278.0, -800.0);
     cam.look_at = Point3::new(278.0, 278.0, 0.0);
-    cam.render(Arc::new(world), Arc::new(lights));
+    cam.render(
+        Arc::new(BvhNode::new(world)),
+        Arc::new(BvhNode::new(lights)),
+    );
 }
 
 fn main() {

@@ -40,6 +40,7 @@ impl Tri {
 }
 
 impl Hittable for Tri {
+    #[allow(clippy::many_single_char_names)]
     fn hit(&self, r: &Ray, ray_t: Interval, rec: &mut HitRecord) -> bool {
         let epsillon = 1e-8;
 

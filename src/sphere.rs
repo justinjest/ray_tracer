@@ -1,4 +1,4 @@
-use crate::{aabb::Aabb, rtweekend::*};
+use crate::{aabb::Aabb, onb::Onb, rtweekend::*};
 
 #[derive(Clone)]
 pub struct Sphere {
@@ -45,9 +45,43 @@ impl Sphere {
         let v = theta / PI;
         (u, v)
     }
+
+    fn random_to_sphere(radius: f64, distance_squared: f64) -> Vec3 {
+        let r1 = random_double();
+        let r2 = random_double();
+        let z = 1.0 + r2 * (1.0 - radius * radius / distance_squared);
+        let phi = 2.0 * PI * r1;
+        let x = phi.cos() * (1.0 - z * z).sqrt();
+        let y = phi.sin() * (1.0 - z * z).sqrt();
+        Vec3::new(x, y, z)
+    }
 }
 
 impl Hittable for Sphere {
+    fn pdf_value(&self, origin: &Point3, direction: &Vec3) -> f64 {
+        let mut rec = HitRecord::new();
+
+        if !self.hit(
+            &Ray::new(*origin, *direction),
+            Interval::new(0.001, INFINITY),
+            &mut rec,
+        ) {
+            return 0.0;
+        }
+
+        let dist_squared = (self.center.at(0.0) - *origin).length_squared();
+        let cos_theta_max = 1.0 - self.radius * self.radius / dist_squared;
+        let solid_angle = 2.0 * PI * (1.0 - cos_theta_max);
+
+        1.0 / solid_angle
+    }
+    fn random(&self, origin: &Point3) -> Vec3 {
+        let direction = self.center.at(0.0) - *origin;
+        let distance_squared = direction.length_squared();
+        let uvw = Onb::new(direction);
+        uvw.transform(Self::random_to_sphere(self.radius, distance_squared))
+    }
+
     fn hit(&self, r: &Ray, ray_t: Interval, rec: &mut HitRecord) -> bool {
         let current_center = self.center.at(r.time());
         let oc = current_center - *r.origin();

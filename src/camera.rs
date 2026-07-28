@@ -62,7 +62,6 @@ impl Camera {
 
     pub fn render(&mut self, world: Arc<dyn Hittable>, lights: Arc<dyn Hittable>) {
         self.initalize();
-        let cam = &*self;
 
         let width: usize = self.image_width as usize;
         let height: usize = self.image_height as usize;
@@ -209,7 +208,7 @@ impl Camera {
         let mixed_pdf = Arc::new(MixturePdf::new(light_ptr, srec.pdf_ptr.unwrap()));
 
         let mut scattered = Ray::new_with_time(rec.p, mixed_pdf.generate(), r.time());
-        let mut pdf_value = mixed_pdf.value(scattered.direction());
+        let pdf_value = mixed_pdf.value(scattered.direction());
 
         let scattering_pdf = rec.mat.scattering_pdf(r, &rec, &mut scattered);
 

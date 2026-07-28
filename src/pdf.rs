@@ -88,9 +88,8 @@ impl Pdf for MixturePdf {
     fn generate(&self) -> Vec3 {
         if random_double() < 0.5 {
             return self.pdf[0].generate();
-        } else {
-            return self.pdf[1].generate();
         }
+        self.pdf[1].generate()
     }
 
     fn value(&self, direction: &Vec3) -> f64 {

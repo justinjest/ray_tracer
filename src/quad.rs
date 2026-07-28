@@ -13,6 +13,7 @@ pub struct Quad {
 }
 
 impl Quad {
+    #[allow(clippy::many_single_char_names)]
     pub fn new(q: Point3, u: Vec3, v: Vec3, mat: Arc<dyn Material>) -> Self {
         let n = cross(&u, &v);
         let normal = unit_vector(n);
