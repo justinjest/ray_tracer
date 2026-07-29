@@ -205,9 +205,10 @@ impl Camera {
         }
 
         let light_ptr = Arc::new(HittablePdf::new(lights.clone(), rec.p));
-        let mixed_pdf = Arc::new(MixturePdf::new(light_ptr, srec.pdf_ptr.unwrap()));
 
+        let mixed_pdf = Arc::new(MixturePdf::new(light_ptr.clone(), srec.pdf_ptr.unwrap()));
         let mut scattered = Ray::new_with_time(rec.p, mixed_pdf.generate(), r.time());
+
         let pdf_value = mixed_pdf.value(scattered.direction());
 
         let scattering_pdf = rec.mat.scattering_pdf(r, &rec, &mut scattered);

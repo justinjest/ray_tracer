@@ -59,7 +59,11 @@ impl Material for Lambertian {
 
     fn scattering_pdf(&self, _r: &Ray, rec: &HitRecord, scattered: &mut Ray) -> f64 {
         let cos_theta = dot(&rec.normal, &unit_vector(*scattered.direction()));
-        if cos_theta < 0.0 { 0.0 } else { cos_theta / PI }
+        if cos_theta < 0.0 {
+            0.0
+        } else {
+            cos_theta / PI
+        }
     }
 }
 
@@ -189,11 +193,34 @@ impl Material for Isotropic {
         srec.attenuation = self.tex.value(rec.u, rec.v, &rec.p).into();
         srec.pdf_ptr = Some(Arc::new(SpherePdf::new()));
         srec.skip_pdf = false;
-
         true
     }
 
     fn scattering_pdf(&self, _r: &Ray, _rec: &HitRecord, _scattered: &mut Ray) -> f64 {
         1.0 / (4.0 * PI)
+    }
+}
+
+pub struct Glossy {
+    albedo: Arc<dyn Texture>,
+    shine: f64,
+}
+
+impl Glossy {
+    pub fn new(albedo: impl Into<Arc<dyn Texture>>, shine: f64) -> Self {
+        Self {
+            albedo: albedo.into(),
+            shine: if shine < 1.0 { shine } else { 1.0 },
+        }
+    }
+}
+
+impl Material for Glossy {
+    fn scatter(&self, r: &Ray, rec: &HitRecord, srec: &mut ScatterRecord) -> bool {
+        srec.attenuation = self.albedo.value(rec.u, rec.v, &rec.p).into();
+        srec.pdf_ptr = Some(Arc::new(CosinePdf::new(&rec.normal)));
+        srec.skip_pdf = false;
+
+        true
     }
 }

@@ -143,7 +143,7 @@ fn cornell_box() {
     )));
 
     let aluminum = Arc::new(Metal::new(Color::new(0.8, 0.85, 0.88), 0.0));
-
+    let plastic = Arc::new(Glossy::new(Color::new(256.0 / 256.0, 0.0, 0.0), 0.2));
     let box1 = generate_box(
         &Point3::new(0.0, 0.0, 0.0),
         &Point3::new(165.0, 330.0, 165.0),
@@ -154,12 +154,20 @@ fn cornell_box() {
     let r_t_box1 = Arc::new(Translate::new(r_box1, Vec3::new(265.0, 0.0, 295.0)));
     world.add(r_t_box1);
 
-    let glass = Arc::new(Dielectric::new(Color::new(1.0, 1.0, 1.0), 1.5));
-    world.add(Arc::new(Sphere::new(
-        Point3::new(190.0, 90.0, 190.0),
-        90.0,
-        glass,
-    )));
+    let glass = Arc::new(Dielectric::new(Color::new(0.8, 0.2, 0.2), 1.5).with_absorbance(0.9));
+
+    //world.add(Arc::new(Sphere::new(
+    //    Point3::new(190.0, 90.0, 190.0),
+    //     90.0,
+    //     glass,
+    // )));
+
+    let suzzy = load_obj_triangles("suzanne.obj", plastic);
+    let s_suzzy = Scale::new(suzzy, Vec3::new(90.0, 90.0, 90.0));
+    let r_suzzy = rotate(Arc::new(s_suzzy), Vec3::new(-33.0, 180.0, -26.0));
+    let t_suzzy = Translate::new(r_suzzy, Vec3::new(190.0, 75.0, 190.0));
+
+    world.add(Arc::new(t_suzzy));
 
     let mut lights = HittableList::new();
 
@@ -178,17 +186,14 @@ fn cornell_box() {
 
     let mut cam = generic_camera();
     cam.aspect_ratio = 1.0;
-    cam.image_width = 1000;
-    cam.samples_per_pixel = 5000;
+    cam.image_width = 600;
+    cam.samples_per_pixel = 100;
     cam.max_depth = 50;
     cam.background = Color::new(0.0, 0.0, 0.0);
     cam.vfov = 40.0;
     cam.look_from = Point3::new(278.0, 278.0, -800.0);
     cam.look_at = Point3::new(278.0, 278.0, 0.0);
-    cam.render(
-        Arc::new(BvhNode::new(world)),
-        Arc::new(BvhNode::new(lights)),
-    );
+    cam.render(Arc::new(BvhNode::new(world)), Arc::new(lights));
 }
 
 fn main() {

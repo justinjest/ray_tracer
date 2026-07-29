@@ -8,14 +8,14 @@ impl Onb {
     pub fn new(n: Vec3) -> Self {
         // Frisvad results can be inaccurate so we use Duff's version
         let sign = f64::copysign(1.0, n.z);
-        let a = -1.0 / (sign / n.z());
-        let b = -n.x() * n.y() * a;
-        let b1 = Vec3::new(1.0 + sign * n.x() * n.x() * a, b, -sign * n.x());
+        let a = -1.0 / (sign + n.z());
+        let b = n.x() * n.y() * a;
+        let b1 = Vec3::new(1.0 + sign * n.x() * n.x() * a, sign * b, -sign * n.x());
         let b2 = Vec3::new(b, sign + n.y() * n.y() * a, -n.y());
         Self { axis: [n, b1, b2] }
     }
 
-    pub fn new_naieve(n: Vec3) -> Self {
+    pub fn new_a(n: Vec3) -> Self {
         let axis_2 = unit_vector(n);
         let a = if axis_2.x().abs() > 0.9 {
             Vec3::new(0.0, 1.0, 0.0)

@@ -93,6 +93,22 @@ impl Pdf for MixturePdf {
     }
 
     fn value(&self, direction: &Vec3) -> f64 {
-        0.5 * self.pdf[0].value(direction) + 0.5 * self.pdf[1].value(direction)
+        (0.5 * self.pdf[0].value(direction)) + (0.5 * self.pdf[1].value(direction))
+    }
+}
+
+pub struct ScatteringPdf {
+    amplitude: f64,
+    peak_width: f64,
+    fall_off: f64,
+}
+
+impl ScatteringPdf {
+    pub fn new(amplitude: f64, peak_width: f64, fall_off: f64) -> Self {
+        Self {
+            amplitude,
+            peak_width,
+            fall_off,
+        }
     }
 }

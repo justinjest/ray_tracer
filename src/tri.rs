@@ -77,11 +77,40 @@ impl Hittable for Tri {
     }
 
     fn bounding_box(&self) -> Aabb {
-        // self.bbox
-        Aabb::new_from_points(
-            &Point3::new(-100.0, -100.0, -100.0),
-            &Point3::new(100.0, 100.0, 100.0),
-        )
+        self.bbox
+    }
+
+    fn pdf_value(&self, origin: &Point3, direction: &Vec3) -> f64 {
+        let mut rec = HitRecord::new();
+        let ray = Ray::new_with_time(*origin, *direction, 0.0);
+
+        if !self.hit(&ray, Interval::new(0.001, INFINITY), &mut rec) {
+            return 0.0;
+        }
+
+        let distance_squared = rec.t * rec.t * direction.length_squared();
+        let cosine = dot(&-direction, &rec.normal).abs();
+
+        if cosine < 1e-8 {
+            return 0.0;
+        }
+
+        let area = 0.5 * cross(&(self.p1 - self.p0), &(self.p2 - self.p0)).length();
+
+        distance_squared / (cosine * area)
+    }
+
+    fn random(&self, origin: &Point3) -> Vec3 {
+        let r1: f64 = random_double();
+        let r2: f64 = random_double();
+
+        let sqr_r1 = r1.sqrt();
+        let u = 1.0 - sqr_r1;
+        let v = r2 * sqr_r1;
+
+        let random_point = (1.0 - u - v) * self.p0 + u * self.p1 + v * self.p2;
+
+        random_point - *origin
     }
 }
 
@@ -112,62 +141,67 @@ fn load_obj_from_path(filename: &str) -> Option<(Vec<tobj::Model>, Vec<tobj::Mat
 }
 
 pub fn load_obj_triangles(filename: &str, mat: Arc<dyn Material>) -> Arc<dyn Hittable> {
-    // Load the OBJ file (triangulating non-triangle faces automatically)
     let (models, _) = load_obj_from_path(filename).expect("Unable to load obj file");
 
     let mut triangles = HittableList::new();
 
+    // --- PASS 1: Find the bounding box of the ENTIRE model ---
     let mut min_x = INFINITY;
     let mut min_y = INFINITY;
     let mut min_z = INFINITY;
-
     let mut max_x = -INFINITY;
     let mut max_y = -INFINITY;
     let mut max_z = -INFINITY;
 
+    for model in &models {
+        let mesh = &model.mesh;
+        for i in 0..mesh.positions.len() / 3 {
+            let x = mesh.positions[3 * i] as f64;
+            let y = mesh.positions[3 * i + 1] as f64;
+            let z = mesh.positions[3 * i + 2] as f64;
+
+            min_x = min_x.min(x);
+            min_y = min_y.min(y);
+            min_z = min_z.min(z);
+            max_x = max_x.max(x);
+            max_y = max_y.max(y);
+            max_z = max_z.max(z);
+        }
+    }
+
+    // Calculate the single center offset for the whole object
+    let center_vec = -Vec3::new(
+        (min_x + max_x) / 2.0,
+        (min_y + max_y) / 2.0,
+        (min_z + max_z) / 2.0,
+    );
+
+    // --- PASS 2: Build the triangles and apply the uniform offset ---
     for model in models {
         let mesh = &model.mesh;
 
-        // Iterate through indices 3 at a time (each group of 3 forms 1 triangle)
         for chunk in mesh.indices.chunks_exact(3) {
             let i0 = chunk[0] as usize;
             let i1 = chunk[1] as usize;
             let i2 = chunk[2] as usize;
 
-            // Extract x, y, z positions for each vertex index
             let p0 = Point3::new(
                 mesh.positions[3 * i0] as f64,
                 mesh.positions[3 * i0 + 1] as f64,
                 mesh.positions[3 * i0 + 2] as f64,
             );
-
             let p1 = Point3::new(
                 mesh.positions[3 * i1] as f64,
                 mesh.positions[3 * i1 + 1] as f64,
                 mesh.positions[3 * i1 + 2] as f64,
             );
-
             let p2 = Point3::new(
                 mesh.positions[3 * i2] as f64,
                 mesh.positions[3 * i2 + 1] as f64,
                 mesh.positions[3 * i2 + 2] as f64,
             );
 
-            min_x = min_x.min(p0.x()).min(p1.x()).min(p2.x());
-            min_y = min_y.min(p0.y()).min(p1.y()).min(p2.y());
-            min_z = min_z.min(p0.z()).min(p1.z()).min(p2.z());
-
-            max_x = max_x.max(p0.x()).max(p1.x()).max(p2.x());
-            max_y = max_y.max(p0.y()).max(p1.y()).max(p2.y());
-            max_z = max_z.max(p0.z()).max(p1.z()).max(p2.z());
-
-            let center_vec = -Vec3::new(
-                (min_x + max_x) / 2.0,
-                (min_y + max_y) / 2.0,
-                (min_z + max_z) / 2.0,
-            );
-
-            // Construct your ray tracer's Triangle
+            // Add the triangle using the consistent global center_vec
             triangles.add(Arc::new(Translate::new(
                 Arc::new(Tri::new(p0, p1, p2, mat.clone())),
                 center_vec,
@@ -177,3 +211,72 @@ pub fn load_obj_triangles(filename: &str, mat: Arc<dyn Material>) -> Arc<dyn Hit
 
     Arc::new(BvhNode::new(triangles))
 }
+
+//////////////////////////////////////////////////////////////////////////////////////////////
+// pub fn load_obj_triangles(filename: &str, mat: Arc<dyn Material>) -> Arc<dyn Hittable> { //
+//     // Load the OBJ file (triangulating non-triangle faces automatically)                //
+//     let (models, _) = load_obj_from_path(filename).expect("Unable to load obj file");    //
+//                                                                                          //
+//     let mut triangles = HittableList::new();                                             //
+//                                                                                          //
+//     let mut min_x = INFINITY;                                                            //
+//     let mut min_y = INFINITY;                                                            //
+//     let mut min_z = INFINITY;                                                            //
+//                                                                                          //
+//     let mut max_x = -INFINITY;                                                           //
+//     let mut max_y = -INFINITY;                                                           //
+//     let mut max_z = -INFINITY;                                                           //
+//                                                                                          //
+//     for model in models {                                                                //
+//         let mesh = &model.mesh;                                                          //
+//                                                                                          //
+//         // Iterate through indices 3 at a time (each group of 3 forms 1 triangle)        //
+//         for chunk in mesh.indices.chunks_exact(3) {                                      //
+//             let i0 = chunk[0] as usize;                                                  //
+//             let i1 = chunk[1] as usize;                                                  //
+//             let i2 = chunk[2] as usize;                                                  //
+//                                                                                          //
+//             // Extract x, y, z positions for each vertex index                           //
+//             let p0 = Point3::new(                                                        //
+//                 mesh.positions[3 * i0] as f64,                                           //
+//                 mesh.positions[3 * i0 + 1] as f64,                                       //
+//                 mesh.positions[3 * i0 + 2] as f64,                                       //
+//             );                                                                           //
+//                                                                                          //
+//             let p1 = Point3::new(                                                        //
+//                 mesh.positions[3 * i1] as f64,                                           //
+//                 mesh.positions[3 * i1 + 1] as f64,                                       //
+//                 mesh.positions[3 * i1 + 2] as f64,                                       //
+//             );                                                                           //
+//                                                                                          //
+//             let p2 = Point3::new(                                                        //
+//                 mesh.positions[3 * i2] as f64,                                           //
+//                 mesh.positions[3 * i2 + 1] as f64,                                       //
+//                 mesh.positions[3 * i2 + 2] as f64,                                       //
+//             );                                                                           //
+//                                                                                          //
+//             min_x = min_x.min(p0.x()).min(p1.x()).min(p2.x());                           //
+//             min_y = min_y.min(p0.y()).min(p1.y()).min(p2.y());                           //
+//             min_z = min_z.min(p0.z()).min(p1.z()).min(p2.z());                           //
+//                                                                                          //
+//             max_x = max_x.max(p0.x()).max(p1.x()).max(p2.x());                           //
+//             max_y = max_y.max(p0.y()).max(p1.y()).max(p2.y());                           //
+//             max_z = max_z.max(p0.z()).max(p1.z()).max(p2.z());                           //
+//                                                                                          //
+//             let center_vec = -Vec3::new(                                                 //
+//                 (min_x + max_x) / 2.0,                                                   //
+//                 (min_y + max_y) / 2.0,                                                   //
+//                 (min_z + max_z) / 2.0,                                                   //
+//             );                                                                           //
+//                                                                                          //
+//             // Construct your ray tracer's Triangle                                      //
+//             triangles.add(Arc::new(Translate::new(                                       //
+//                 Arc::new(Tri::new(p0, p1, p2, mat.clone())),                             //
+//                 center_vec,                                                              //
+//             )));                                                                         //
+//         }                                                                                //
+//     }                                                                                    //
+//                                                                                          //
+//     Arc::new(BvhNode::new(triangles))                                                    //
+// }                                                                                        //
+//////////////////////////////////////////////////////////////////////////////////////////////
